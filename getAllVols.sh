@@ -2,7 +2,8 @@
 
 # Check if a list of journals is provided as an argument
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <list_of_journals>"
+    echo "Gets all the journals listed in the fileParam from the remote server"
+    echo "Usage: $0 <listOfJournals>"
     exit 1
 fi
 

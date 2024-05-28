@@ -2,12 +2,15 @@
 
 journal=${1:-"demo"}
 
+echo "Gets the volumes of the specified journal from the remote server"
+
 # Verificar si se ejecuta con sudo
 if [ "$EUID" -ne 0 ]; then
     echo "This script needs sudo privileges. Run as follows 'sudo ./getRemoteVol.sh'"
     exit 1
 fi
 
+startTime=$(date +%s)
 
 ## CONFIG VARIABLES
 
@@ -30,47 +33,72 @@ destBackups=/srv/backups/${journal}
 destAll=/srv/volumes/all/${journal}
 destDb=/srv/volumes/db/${journal}
 destLogs=/srv/volumes/logs/${journal}
-destFiles=/srv/volumes/files/${journal}
-destFilesPublic=/srv/volumes/files/${journal}/public
-destFilesPrivate=/srv/volumes/files/${journal}/private
-destFilesConfigs=/srv/volumes/files/${journal}/config
+destFiles=/srv/volumes/files
+destFilesPublic=${destFiles}/public/${journal}
+destFilesPrivate=${destFiles}/private/${journal}
+destFilesConfigs=${destFiles}/config/${journal}
 
-# Testing:
-# rm $destBackups -Rf
-# rm $destAll -Rf
-# rm $destDb -Rf
-# rm $destLogs -Rf
-# rm $destFiles -Rf
-# rm $destConfigs -Rf
+# Debug:
+## rm $destBackups/${journal} -Rf
+## rm $destDb/${journal} -Rf
+## rm $destLogs/${journal} -Rf
+## rm $destFiles/${journal} -Rf
+## rm $destConfigs/${journal} -Rf
+## rm $destAll/${journal} -Rf
 
-# Create the required folder structure:
-mkdir ${destBackups} 		&& \
-mkdir ${destAll} 			&& \
-mkdir ${destDb} 			&& \
-mkdir ${destLogs} 			&& \
-mkdir ${destFiles} 			&& \
-mkdir ${destFilesPublic} 	&& \
-mkdir ${destFilesPrivate} 	&& \
-mkdir ${destFilesConfigs} 
+echo "Ensures the required folder structure exists"
+mkdir ${destBackups}        > /dev/null 2>&1
+mkdir ${destAll}            > /dev/null 2>&1
+mkdir ${destDb}             > /dev/null 2>&1
+mkdir ${destLogs}           > /dev/null 2>&1
+mkdir ${destFiles}          > /dev/null 2>&1
+mkdir ${destFilesPublic}    > /dev/null 2>&1
+mkdir ${destFilesPrivate}   > /dev/null 2>&1
+mkdir ${destFilesConfigs}   > /dev/null 2>&1
 
 # Pulls the DB dumps and place them on migration folder
-## rsync -avzh -e ssh ${remoteUsr}@adacar:/srv/volumes/${journal}/logs ${destLogs}
-echo "rsync -avzh --rsync-path='sudo rsync' ${remoteUsr}@adacar:${srcBackups} ${destBackups}"
+# Notice:
+# Locally this script need to be sudoer. Not asked here because the script is.
+# Remotelly rsync needs sudo to reach all files. rsync-path parameter adds sudo privileges.
+# We need to exchange keys to avoid asking passwords all the time.
+# Final slash in srcVars indicate we like to copy the content (not the folder).
+
+echo "--> Rsyncing: ${srcBackups}"
 rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcBackups} ${destBackups}
+unlink ${destAll}/migration
 ln -s ${destBackups} ${destAll}/migration
 
-# Pulls the files
-rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcDb} ${destDb}
+# Pulls the db/Log/files
+echo "--> Rsyncing: ${srcDb}"
+rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcDb}/ ${destDb}
+unlink ${destAll}/db
 ln -s ${destDb} ${destAll}/db
 
-rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcLogs} ${destLogs}
+echo "--> Rsyncing ${srcLogs}"
+rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcLogs}/ ${destLogs}
+unlink ${destAll}/logs
 ln -s ${destLogs} ${destAll}/logs
 
-rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesPublic} ${destFilesPublic}
+echo "--> Rsyncing ${srcFilesPublic}"
+echo "rsync -avzh -e \"ssh -i ${privateKeyPath}\" --rsync-path=\"sudo rsync\" ${remoteUsr}@adacar:${srcFilesPublic}/ ${destFilesPublic}"
+rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesPublic}/ ${destFilesPublic}
+unlink ${destAll}/public
 ln -s ${destFilesPublic} ${destAll}/public
 
-rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesPrivate} ${destFilesPrivate}
+echo "--> Rsyncing ${srcFilesPrivate}"
+rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesPrivate}/ ${destFilesPrivate}
+unlink ${destAll}/private
 ln -s ${destFilesPrivate} ${destAll}/private
 
-rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesConfigs} ${destFilesConfigs}
+echo "--> Rsyncing ${srcFilesConfig}"
+rsync -avzh -e "ssh -i ${privateKeyPath}" --rsync-path="sudo rsync" ${remoteUsr}@adacar:${srcFilesConfigs}/ ${destFilesConfigs}
+unlink ${destAll}/config
 ln -s ${destFilesConfigs} ${destAll}/config
+
+endTime=$(date +%s)
+
+# Calcula el tiempo transcurrido
+elapsedTime=$((endTime - startTime))
+formattedTime=$(date -u -d @"$elapsedTime" +'%H:%M:%S')
+
+echo ">>>> La còpia de los volúmenes de $journal ha tardado: $formattedTime"

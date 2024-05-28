@@ -5,14 +5,14 @@ default:
 	@echo "Available targets:"
 	@just -l
 
-# Target to run the analyze.sh script
+# Calculates and display the space occupied for each journal
 analyze:
 	sudo ./analyze.sh ${JOURNAL_LIST:-journals.lst}
 
-# Target to run the getAllVols.sh script
+# Gets all the journals listed in the fileParam from the remote server
 getAllVols:
 	sudo ./getAllVols.sh ${JOURNAL_LIST:-journals.lst}
 
-# Target to run the getRemoteVols.sh script
-getRemoteVols:
-	sudo ./getRemoteVols.sh ${JOURNAL_NAME:-demo}
+# Gets the volumes of the specified journal from the remote server
+getRemoteVols journal:
+	sudo ./getRemoteVol.sh {{journal}} #${JOURNAL_NAME:-demo}
