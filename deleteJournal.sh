@@ -45,7 +45,10 @@ docker compose down
 
 # Create a tarball of ALL data for this journal named YYYYMMDD-HHMM-journal.tgz
 timestamp=$(date +%Y%m%d-%H%M)
-backupFile="/srv/backups/${journal}/${timestamp}-${journal}.tgz"
+bckDestination="/srv/backups/deleted"
+mkdir "${bckDestination}/${journal}" -p
+chmod 666 ${bckDestination} -R
+backupFile="${bckDestination}/${journal}/${timestamp}-${journal}.tgz"
 
 tar -czf $backupFile $journalSite $journalDbDumps $journalAll $journalDb $journalLogs $journalFilesPublic $journalFilesPrivate $journalFilesConfigs
 
