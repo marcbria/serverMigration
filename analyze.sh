@@ -3,15 +3,15 @@
 # Check if a journal list file is provided as an argument
 if [ $# -eq 0 ]; then
     echo "Calculates and display the space occupied for each journal"
-    echo "Usage: $0 <journal_list_file>"
+    echo "Usage: $0 <journalListFile>"
     exit 1
 fi
 
 journalListFile=$1
 
 # Check if the file exists
-if [ ! -f "$journalListFile" ]; then
-    echo "The file $journalListFile does not exist."
+if [ ! -f ./configs/"$journalListFile" ]; then
+    echo "The file ./configs/$journalListFile does not exist."
     exit 1
 fi
 
@@ -52,7 +52,7 @@ printOutputLine() {
 }
 
 # Header of the output
-printf "%-20s | %-10s | %-10s | %-10s |\n" "Journal" "Total Size" "Volume" "Backup"
+printf "%-20s  | %-10s | %-10s | %-10s |\n" "Journal" "Total Size" "Volume" "Backup"
 
 # Calculate and display the space occupied for each journal
 while IFS= read -r journal; do
@@ -60,5 +60,5 @@ while IFS= read -r journal; do
     backupSize=$(getDirectorySize "/srv/backups/${journal}")
     totalSize=$((volumeSize + backupSize))
     printOutputLine "$journal" "$totalSize" "$volumeSize" "$backupSize"
-done < "$journalListFile"
+done < "./configs/$journalListFile"
 
